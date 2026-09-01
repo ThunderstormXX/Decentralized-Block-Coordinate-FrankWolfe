@@ -134,6 +134,16 @@ def _completion_logps(model, sequences: torch.Tensor, prompt_length: int) -> tor
 
 
 @torch.no_grad()
+def _generate(model, **kwargs) -> torch.Tensor:
+    previous = model.config.use_cache
+    model.config.use_cache = True
+    try:
+        return model.generate(**kwargs)
+    finally:
+        model.config.use_cache = previous
+
+
+@torch.no_grad()
 def _calibration(model, tokenizer, adapters, prompts: list[str], device) -> dict[str, float]:
     encoded = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True).to(device)
     policy_logits = model(**encoded).logits
@@ -151,7 +161,8 @@ def _evaluate(model, tokenizer, adapters, rows, device, max_new_tokens: int) -> 
     model.eval()
     for row in rows:
         encoded = tokenizer(_prompt(row["question"]), return_tensors="pt").to(device)
-        sequence = model.generate(
+        sequence = _generate(
+            model,
             **encoded,
             do_sample=False,
             max_new_tokens=max_new_tokens,
@@ -235,16 +246,16 @@ def run_rlvr(config: dict[str, Any], variant_name: str) -> Path:
         prompt = _prompt(row["question"])
         encoded = tokenizer(prompt, return_tensors="pt", truncation=True).to(device)
         prompt_length = int(encoded["input_ids"].shape[1])
-        with torch.no_grad():
-            sequences = model.generate(
-                **encoded,
-                do_sample=True,
-                temperature=float(training["temperature"]),
-                top_p=float(training["top_p"]),
-                num_return_sequences=int(training["group_size"]),
-                max_new_tokens=int(training["max_new_tokens"]),
-                pad_token_id=tokenizer.pad_token_id,
-            )
+        sequences = _generate(
+            model,
+            **encoded,
+            do_sample=True,
+            temperature=float(training["temperature"]),
+            top_p=float(training["top_p"]),
+            num_return_sequences=int(training["group_size"]),
+            max_new_tokens=int(training["max_new_tokens"]),
+            pad_token_id=tokenizer.pad_token_id,
+        )
         response_ids = sequences[:, prompt_length:]
         mask = _completion_mask(response_ids, tokenizer.eos_token_id)
         completions = tokenizer.batch_decode(response_ids, skip_special_tokens=True)

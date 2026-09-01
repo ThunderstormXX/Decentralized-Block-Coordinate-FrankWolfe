@@ -1,0 +1,40 @@
+run_name: qwen15b_gsm8k_rlvr_pilot
+seed: 2040
+model:
+  name: Qwen/Qwen2.5-1.5B-Instruct
+  dtype: bfloat16
+  device: cuda
+data:
+  train_samples: 16
+  eval_samples: 8
+adapter:
+  target_suffixes: [q_proj]
+  max_modules: 1
+  lora_rank: 4
+  lora_alpha: 8
+  radius: 0.50
+  lmo_iters: 8
+training:
+  steps: 8
+  group_size: 8
+  max_new_tokens: 128
+  eval_max_new_tokens: 128
+  temperature: 0.8
+  top_p: 0.95
+  learning_rate: 0.0001
+  fw_gamma: 0.10
+constraint:
+  target_per_token: 0.02
+  initial_lambda: 0.10
+  dual_lr: 0.10
+  tolerance: 0.25
+  max_backtracks: 4
+variants:
+  R0: {geometry: frozen, optimizer: none, kl_control: none}
+  R1: {geometry: lora, optimizer: adamw, kl_control: none}
+  R2: {geometry: lora, optimizer: adamw, kl_control: penalty, beta: 0.05}
+  R3: {geometry: lora, optimizer: adamw, kl_control: dual}
+  F1: {geometry: nuclear_fw, optimizer: fw, kl_control: none}
+  F2: {geometry: nuclear_fw, optimizer: fw, kl_control: penalty, beta: 0.05}
+  F3: {geometry: nuclear_fw, optimizer: fw, kl_control: dual}
+  F4: {geometry: nuclear_fw, optimizer: fw, kl_control: backtracking}
