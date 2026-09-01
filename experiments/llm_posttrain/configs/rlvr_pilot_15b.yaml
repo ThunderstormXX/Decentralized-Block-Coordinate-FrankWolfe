@@ -5,8 +5,8 @@ model:
   dtype: bfloat16
   device: cuda
 data:
-  train_samples: 16
-  eval_samples: 8
+  train_samples: 8
+  eval_samples: 4
 adapter:
   target_suffixes: [q_proj]
   max_modules: 1
@@ -15,10 +15,10 @@ adapter:
   radius: 0.50
   lmo_iters: 8
 training:
-  steps: 8
+  steps: 4
   group_size: 8
-  max_new_tokens: 128
-  eval_max_new_tokens: 128
+  max_new_tokens: 256
+  eval_max_new_tokens: 256
   temperature: 0.8
   top_p: 0.95
   learning_rate: 0.0001
