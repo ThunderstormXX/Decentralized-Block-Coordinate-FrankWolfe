@@ -10,6 +10,10 @@ cd "$package_root"
 
 uv python install 3.11
 uv venv --python 3.11 .venv
+# The server driver exposes CUDA 12.9; pin the official cu128 build instead of
+# letting PyPI select a CUDA 13 wheel that the installed driver cannot load.
+uv pip install --python .venv/bin/python torch==2.8.0 \
+  --index-url https://download.pytorch.org/whl/cu128
 uv pip install --python .venv/bin/python -e '.[test]'
 
 {

@@ -36,6 +36,8 @@ bash server/run_end_to_end.sh
 
 Use GPU 3 on the current `opt_2` host by default; override with
 `CUDA_VISIBLE_DEVICES` when scheduling changes.
+Bootstrap pins the official PyTorch 2.8 CUDA 12.8 wheel because the server's
+CUDA 12.9-capable driver cannot load CUDA 13 wheels.
 
 `run_end_to_end.sh` is gated with `set -e`: tests and the resource probe must
 pass before SFT starts, SFT and the clean-tree check must pass before the
