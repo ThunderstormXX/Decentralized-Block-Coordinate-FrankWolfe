@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dbcfw-timevarying-benchmark"
+version = "0.1.0"
+description = "DFW vs DBCFW benchmarks on time-varying communication graphs."
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "scipy",
+  "networkx",
+  "pandas",
+  "matplotlib",
+  "pyyaml",
+  "torch",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+dbcfw-bench = "dbcfw_bench.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

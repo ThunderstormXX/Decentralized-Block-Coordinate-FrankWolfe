@@ -1,0 +1,18 @@
+objective: sms_spam_logreg
+methods: [dfw, dbcfw]
+agents: [10]
+dims: [2000]
+blocks: [20]
+batches: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, all]
+graphs: [erdos]
+iters: 200000
+wall_time_budget_sec: 3.0
+samples_per_agent: 100
+reg: 0.0001
+box_radius: 1.0
+edge_prob: 0.35
+seed: 46
+graph_seed: 4046
+log_every: 5
+opt_maxiter: 0
+data_dir: data

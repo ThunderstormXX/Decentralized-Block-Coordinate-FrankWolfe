@@ -1,0 +1,71 @@
+\begin{thebibliography}{8}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Beck et~al.(2015)Beck, Pauwels, and Sabach]{beck2015cyclic}
+Amir Beck, Edouard Pauwels, and Shoham Sabach.
+\newblock The cyclic block conditional gradient method for convex optimization
+  problems.
+\newblock \emph{SIAM Journal on Optimization}, 25\penalty0 (4):\penalty0
+  2024--2049, 2015.
+\newblock \doi{10.1137/140978357}.
+
+\bibitem[Boyd and Vandenberghe(2004)]{boyd2004}
+Stephen Boyd and Lieven Vandenberghe.
+\newblock \emph{Convex Optimization}.
+\newblock Cambridge University Press, 2004.
+\newblock URL \url{https://web.stanford.edu/~boyd/cvxbook/}.
+
+\bibitem[Jaggi(2013)]{jaggi2013}
+Martin Jaggi.
+\newblock Revisiting frank--wolfe: Projection-free sparse convex optimization.
+\newblock In \emph{Proceedings of the 30th International Conference on Machine
+  Learning}, volume~28 of \emph{Proceedings of Machine Learning Research},
+  pages 427--435, 2013.
+\newblock URL \url{https://proceedings.mlr.press/v28/jaggi13.html}.
+
+\bibitem[Lacoste-Julien et~al.(2013)Lacoste-Julien, Jaggi, Schmidt, and
+  Pletscher]{lacostejulien2013block}
+Simon Lacoste-Julien, Martin Jaggi, Mark Schmidt, and Patrick Pletscher.
+\newblock Block-coordinate frank--wolfe optimization for structural {SVMs}.
+\newblock In \emph{Proceedings of the 30th International Conference on Machine
+  Learning}, volume~28 of \emph{Proceedings of Machine Learning Research},
+  pages 53--61, 2013.
+\newblock URL \url{https://proceedings.mlr.press/v28/lacoste-julien13.html}.
+
+\bibitem[Rockafellar(1970)]{rockafellar1970}
+R.~Tyrrell Rockafellar.
+\newblock \emph{Convex Analysis}.
+\newblock Princeton University Press, 1970.
+\newblock \doi{10.1515/9781400873173}.
+
+\bibitem[Shalev-Shwartz and Zhang(2013)]{shalevshwartz2013sdca}
+Shai Shalev-Shwartz and Tong Zhang.
+\newblock Stochastic dual coordinate ascent methods for regularized loss
+  minimization.
+\newblock \emph{Journal of Machine Learning Research}, 14:\penalty0 567--599,
+  2013.
+\newblock URL \url{https://www.jmlr.org/papers/v14/shalev-shwartz13a.html}.
+
+\bibitem[Tsochantaridis et~al.(2005)Tsochantaridis, Joachims, Hofmann, and
+  Altun]{tsochantaridis2005}
+Ioannis Tsochantaridis, Thorsten Joachims, Thomas Hofmann, and Yasemin Altun.
+\newblock Large margin methods for structured and interdependent output
+  variables.
+\newblock \emph{Journal of Machine Learning Research}, 6:\penalty0 1453--1484,
+  2005.
+\newblock URL \url{https://www.jmlr.org/papers/v6/tsochantaridis05a.html}.
+
+\bibitem[Wai et~al.(2017)Wai, Lafond, Scaglione, and
+  Moulines]{wai2017decentralized}
+Hoi-To Wai, Jean Lafond, Anna Scaglione, and Eric Moulines.
+\newblock Decentralized frank--wolfe algorithm for convex and nonconvex
+  problems.
+\newblock \emph{IEEE Transactions on Automatic Control}, 62\penalty0
+  (11):\penalty0 5522--5537, 2017.
+\newblock \doi{10.1109/TAC.2017.2685559}.
+
+\end{thebibliography}

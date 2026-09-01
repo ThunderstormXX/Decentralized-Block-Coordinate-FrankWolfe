@@ -1,0 +1,385 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,margin=23mm]{geometry}
+\usepackage{fontspec}
+\IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\setmainfont{Arial}}
+\IfFontExistsTF{Arial}{\setsansfont{Arial}}{\setsansfont{Arial Unicode MS}}
+\usepackage{polyglossia}
+\setmainlanguage{russian}
+\setotherlanguage{english}
+\newfontfamily\cyrillicfont{Times New Roman}
+\newfontfamily\cyrillicfontsf{Arial}
+\newfontfamily\cyrillicfonttt{Arial}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage{booktabs,tabularx,array}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue!45!black,citecolor=blue!45!black,urlcolor=blue!45!black]{hyperref}
+\usepackage{microtype}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.48em}
+\setlist{nosep,leftmargin=*}
+\renewcommand{\arraystretch}{1.15}
+\emergencystretch=2.5em
+\sloppy
+
+\newtheorem{theorem}{Теорема}
+\newtheorem{proposition}{Утверждение}
+\newtheorem{remark}{Замечание}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\A}{\mathcal{A}}
+\newcommand{\ip}[2]{\left\langle #1,#2\right\rangle}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\dom}{\operatorname{dom}}
+\newcommand{\conv}{\operatorname{conv}}
+\newcommand{\method}[1]{\textsf{#1}}
+
+\title{\bfseries Дуализация как механизм обнаружения блочной структуры\\[0.25em]
+\large От ERM к Frank--Wolfe, block-coordinate Frank--Wolfe и децентрализованным вариантам}
+\author{Исследовательская заметка проекта Decentralized Block-Coordinate Frank--Wolfe}
+\date{16 июля 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Рассматривается общий механизм, при котором регуляризованная задача эмпирического риска после Fenchel--Lagrange dualization приобретает декартову структуру по объектам данных. Для выпуклой задачи
+\(
+\min_w R(w)+n^{-1}\sum_i f_i(K_iw)
+\)
+dual variables естественно группируются как \(\alpha=(\alpha_1,\ldots,\alpha_n)\), а допустимая область равна произведению локальных областей сопряженных функций, если исходные summands и ограничения не связывают разные примеры. Для max-form losses и сильно выпуклого \(R\) dual становится гладкой выпуклой минимизацией на product set; primal-параметр восстанавливается как \(w(\alpha)=\nabla R^*(q(\alpha))\), а Frank--Wolfe gap совпадает с primal--dual gap. Полный linear minimization oracle раскладывается по блокам, но вызывает все локальные inference oracles. Block-coordinate Frank--Wolfe сохраняет ту же глобальную допустимую область, вызывая oracle только для выбранных блоков. Мы формализуем условия этого перехода, отделяем метод от stochastic gradient, описываем decentralized extension и протокол честного сравнения. Существенная граница применимости: результат не переносится автоматически на произвольную end-to-end deep learning задачу, поскольку nonconvex parametrization разрушает выпуклую dual equivalence; корректные применения включают выпуклые головы, structured layers, convex surrogates и отдельные constrained subproblems.
+\end{abstract}
+
+\section{Мотивация и основной тезис}
+
+Стандартная запись обучения
+\begin{equation}
+  \label{eq:erm-informal}
+  \min_w \; \frac1n\sum_{i=1}^n f_i(w)+R(w)
+\end{equation}
+скрывает важную структуру: все объекты используют один и тот же параметр \(w\), поэтому primal выглядит полностью связанным. Но связь находится в параметре, а \emph{негладкость или ограничения} часто локальны: один hinge, один epigraph, одна structured alternative family или один demand относятся только к одному \(i\). После dualization общая переменная \(w\) устраняется, а локальные ограничения получают локальные multipliers \(\alpha_i\). В результате связь переносится из feasible set в гладкую целевую функцию через агрегат \(\sum_i K_i^*\alpha_i\), тогда как feasible set распадается:
+\[
+  \alpha\in\A=\A_1\times\cdots\times\A_n.
+\]
+
+Это и есть основной механизм. Дуализация здесь полезна не только как источник lower bound: она меняет геометрию вычисления. Полный FW oracle на product set равен набору независимых локальных oracle calls, а BCFW может выполнить только небольшую их часть.
+
+\begin{center}
+\fbox{\parbox{0.92\linewidth}{\centering
+\(\displaystyle
+\text{локальная сумма/ограничения в primal}
+\ \Longrightarrow\ 
+\text{локальные dual variables}
+\ \Longrightarrow\
+\text{product feasible set}
+\ \Longrightarrow\
+\text{block-separable LMO}.
+\)}}
+\end{center}
+
+\section{Общий Fenchel dual для регуляризованного ERM}
+
+Пусть \(w\in\R^d\), \(K_i:\R^d\to\R^{m_i}\) --- линейные отображения, а \(R\) и \(f_i\) --- proper closed convex functions. Рассмотрим
+\begin{equation}
+  \label{eq:primal-fenchel}
+  P^\star=\min_{w\in\R^d}
+  \left\{P(w):=R(w)+\frac1n\sum_{i=1}^n f_i(K_iw)\right\}.
+\end{equation}
+Используя \(f_i(z)=\sup_{\alpha_i}\{\ip{\alpha_i}{z}-f_i^*(\alpha_i)\}\), получаем седловую форму
+\[
+  \min_w\sup_{\alpha_1,\ldots,\alpha_n}
+  R(w)+\frac1n\sum_i
+  \bigl(\ip{\alpha_i}{K_iw}-f_i^*(\alpha_i)\bigr).
+\]
+При стандартной constraint qualification (например, существует \(w_0\in\dom R\), для которого все \(K_iw_0\) лежат в относительной внутренности соответствующих \(\dom f_i\)) min и sup можно переставить. Минимизация по \(w\) дает Fenchel dual \citep{rockafellar1970,boyd2004}
+\begin{equation}
+  \label{eq:fenchel-dual}
+  D^\star=\max_{\alpha_i\in\dom f_i^*}
+  \left\{-R^*\!\left(-\frac1n\sum_iK_i^*\alpha_i\right)
+  -\frac1n\sum_i f_i^*(\alpha_i)\right\}.
+\end{equation}
+
+\begin{theorem}[Когда возникает product-структура]
+\label{thm:product}
+Для задачи \eqref{eq:primal-fenchel} допустимая dual-область является
+\(
+\A=\prod_i\dom f_i^*
+\), если каждый summand имеет собственную сопряженную переменную и в primal нет дополнительных ограничений, связывающих значения разных \(i\). Связь между блоками сохраняется только в objective через \(\sum_iK_i^*\alpha_i\). Если же primal содержит coupled constraint, например \(\sum_i C_i z_i=c\), его multiplier или соответствующее dual-ограничение связывает блоки и чистая product-структура, вообще говоря, исчезает.
+\end{theorem}
+
+\begin{proof}
+Область супремума в Fenchel representation каждого \(f_i\) равна \(\dom f_i^*\) и выбирается независимо от остальных. После устранения \(w\) никакого нового feasibility constraint не возникает: сумма \(K_i^*\alpha_i\) входит аргументом в \(R^*\). Дополнительное coupled constraint добавило бы в лагранжиан общий multiplier или indicator of a coupled set, что нарушило бы независимость областей.
+\end{proof}
+
+Теорема объясняет происхождение блоков, но еще не гарантирует применимость \emph{обычного} FW. Для классического анализа нужны компактная выпуклая \(\A\) и гладкая выпуклая минимизируемая функция. В \eqref{eq:fenchel-dual} слагаемые \(f_i^*\) могут быть нелинейными или негладкими. Поэтому наиболее чистая FW-форма возникает для max/hinge losses, чьи conjugates состоят из indicator of a compact set и линейного члена. В более общем случае применим generalized/composite conditional gradient, либо epigraph lifting, но не всегда стандартный FW \citep{beck2015cyclic}.
+
+\section{Max-form: каноническая задача для Frank--Wolfe}
+
+Пусть локальный loss имеет вариационное представление
+\begin{equation}
+  \label{eq:max-loss}
+  H_i(w)=\max_{a_i\in\A_i}
+  \ip{a_i}{b_i-M_iw},
+\end{equation}
+где \(\A_i\subset\R^{m_i}\) --- непустое компактное выпуклое множество. Оно может быть симплексом distributions over labels, convex hull альтернатив, capacity polytope или локальным множеством multipliers. Primal равен
+\begin{equation}
+  \label{eq:primal-max}
+  \min_w P(w):=R(w)+\frac1n\sum_i H_i(w).
+\end{equation}
+Обозначим
+\[
+  q(a)=\frac1n\sum_iM_i^*a_i,
+  \qquad \A=\prod_i\A_i.
+\]
+Лагранжиан-седловая функция и concave dual имеют вид
+\begin{align}
+  L(w,a)&=R(w)+\frac1n\sum_i\ip{a_i}{b_i-M_iw},\\
+  D(a)&=\frac1n\sum_i\ip{a_i}{b_i}-R^*(q(a)),
+  \qquad \max_{a\in\A}D(a).
+  \label{eq:dual-max}
+\end{align}
+Эквивалентная FW-задача --- минимизация
+\begin{equation}
+  \label{eq:F}
+  F(a):=-D(a)=R^*(q(a))-\frac1n\sum_i\ip{a_i}{b_i}
+  \quad\text{на }\A.
+\end{equation}
+
+\subsection{Primal recovery и гладкость dual}
+
+Если \(R\) строго выпукла и минимум по \(w\) единственен, primal recovery map равна
+\begin{equation}
+  \label{eq:recovery}
+  w(a)=\argmin_w L(w,a)=\nabla R^*(q(a)).
+\end{equation}
+Если \(R\) \(\mu\)-сильно выпукла, то \(R^*\) дифференцируема и \(\nabla R^*\) имеет Lipschitz constant \(1/\mu\). Следовательно, \(F\) гладкая, а ее block-gradient равен
+\begin{equation}
+  \label{eq:block-grad}
+  \nabla_iF(a)=\frac1n\bigl(M_iw(a)-b_i\bigr).
+\end{equation}
+Для \(R(w)=\frac\lambda2\norm{w}_2^2\):
+\begin{equation}
+  \label{eq:quadratic}
+  w(a)=\frac{q(a)}{\lambda},\qquad
+  F(a)=\frac{\norm{q(a)}_2^2}{2\lambda}
+  -\frac1n\sum_i\ip{a_i}{b_i}.
+\end{equation}
+
+\begin{proposition}[FW gap равен primal--dual gap]
+\label{prop:gap}
+Пусть выполнены условия max-form выше и \(w(a)\) задано \eqref{eq:recovery}. Тогда
+\begin{align}
+  g_{\mathrm{FW}}(a)
+  &:=\max_{s\in\A}\ip{a-s}{\nabla F(a)}\\
+  &=P(w(a))-D(a)\\
+  &=\frac1n\sum_i\left[
+    H_i(w(a))-\ip{a_i}{b_i-M_iw(a)}\right]\ge0.
+  \label{eq:gap-identity}
+\end{align}
+\end{proposition}
+
+\begin{proof}
+По \eqref{eq:block-grad} максимизация FW gap распадается по блокам. Для каждого \(i\),
+\(
+\max_{s_i\in\A_i}\ip{a_i-s_i}{M_iw-b_i}/n
+\)
+равна \(n^{-1}[H_i(w)-\ip{a_i}{b_i-M_iw}]\). Сумма этих выражений совпадает с \(P(w)-D(a)\), поскольку равенство Fenchel--Young для \(w=\nabla R^*(q)\) дает \(R(w)+R^*(q)=\ip{q}{w}\).
+\end{proof}
+
+Отсюда следует точный ответ на вопрос, почему улучшение dual улучшает primal solution. Dual objective дает возрастающий lower bound \(D(a)\le P^\star\), recovery map строит конкретный primal iterate, а \eqref{eq:gap-identity} сертифицирует его качество:
+\[
+  0\le P(w(a))-P^\star\le P(w(a))-D(a)=g_{\mathrm{FW}}(a).
+\]
+При \(\mu\)-сильно выпуклом \(P\) дополнительно
+\(
+\norm{w(a)-w^\star}^2\le 2g_{\mathrm{FW}}(a)/\mu
+\).
+
+\section{Почему full LMO дорогой}
+
+Обычный FW строит \citep{jaggi2013}
+\begin{equation}
+  \label{eq:full-lmo}
+  s\in\argmin_{u\in\A}\ip{u}{\nabla F(a)}.
+\end{equation}
+Из product-структуры следует
+\begin{equation}
+  \label{eq:lmo-factor}
+  s_i\in\argmin_{u_i\in\A_i}
+  \ip{u_i}{M_iw(a)-b_i},\qquad i=1,\ldots,n.
+\end{equation}
+Алгебраически это идеальная декомпозиция. Вычислительно она означает \(n\) oracle calls за одну full iteration. В Structural SVM каждый call --- loss-augmented inference over a combinatorial output space. В routing/transport это поиск по всем demands или columns. Если один oracle стоит \(C_i\), то full LMO стоит \(\sum_i C_i\), даже если все вызовы могут быть распараллелены. Parallelism уменьшает latency только при достаточном числе вычислителей и не устраняет total work.
+
+Полный gap также требует всех block oracles. Поэтому при редких block updates полезно различать: (i) дешевую update-стоимость; (ii) периодическую дорогую full-gap диагностику; (iii) unbiased или upper-bound gap estimators, если они допустимы для конкретного анализа.
+
+\section{Block-coordinate Frank--Wolfe}
+
+На итерации \(t\) выбирается \(B_t\subseteq\{1,\ldots,n\}\). Для \(i\in B_t\) вычисляется \eqref{eq:lmo-factor}, после чего
+\begin{equation}
+  \label{eq:block-update}
+  a_i^{t+1}=(1-\gamma_{t,i})a_i^t+\gamma_{t,i}s_i^t,
+  \qquad i\in B_t,
+\end{equation}
+а остальные блоки не меняются. Поскольку и \(a_i^t\), и \(s_i^t\) принадлежат \(\A_i\), допустимость относительно \emph{того же самого} global set \(\A\) сохраняется. Никакой mini-batch relaxation feasible set не вводится.
+
+\begin{center}
+\fbox{\parbox{0.93\linewidth}{
+\textbf{Одна итерация BCFW.}
+Восстановить или инкрементально поддержать \(w(a^t)\); выбрать блоки \(B_t\); для каждого выбранного блока решить локальный LMO; обновить только эти \(a_i\) и соответствующий вклад в \(q(a)\). Step size можно задать правилом или line search.}}
+\end{center}
+
+Рандомизированный single-block BCFW для Structural SVM имеет доказанные гарантии сходимости, вычислимый duality gap и дешевую итерацию \citep{lacostejulien2013block}. Важная практическая переменная --- не только \(|B_t|\), но и sampling law: uniform, importance sampling по curvature/cost или gap-based sampling.
+
+\subsection{Почему это не stochastic gradient}
+
+В SGD случайный объект дает случайную оценку градиента primal objective, например \(\nabla f_i(w)\), и обновление обычно покидает convex hull ранее найденных atoms. В BCFW используется точный block-gradient \(\nabla_iF(a)\), определенный текущей глобальной агрегированной моделью \(w(a)\). Случайность выбирает, \emph{какой LMO спросить}, а не заменяет градиент шумной оценкой. Обновление остается условно-градиентным convex-combination step в feasible block. Поэтому корректное название --- randomized block oracle, а не stochastic gradient.
+
+Это различие может размываться в реализации: если \(w(a)\) или gradient tracker сами оценены стохастически, возникает гибрид stochastic BCFW. Но чистый BCFW такой аппроксимации не требует.
+
+\section{Децентрализованный переход}
+
+Пусть имеются \(N\) агентов, агент \(r\) владеет индексами \(I_r\), а \(\{I_r\}\) образуют partition датасета. Глобальная dual-переменная по-прежнему имеет product-структуру, но распределена физически:
+\[
+  \A=\prod_{r=1}^N\prod_{i\in I_r}\A_i,
+  \qquad
+  q(a)=\sum_{r=1}^N q_r(a),\quad
+  q_r(a)=\frac1n\sum_{i\in I_r}M_i^*a_i.
+\]
+Проблема состоит не в локальном LMO --- он уже локален, --- а в том, что его gradient использует общий \(w(a)=\nabla R^*(\sum_rq_r)\). Децентрализованный метод заменяет центральное агрегирование обменами по графу. У каждого агента могут храниться:
+\begin{itemize}
+  \item локальные dual blocks \(a_i\), \(i\in I_r\);
+  \item локальная копия модели или агрегата \(w_r^t\)/\(q_r^t\);
+  \item при необходимости gradient-tracking state \(y_r^t\).
+\end{itemize}
+
+Пусть \(W_t\) --- mixing matrix, согласованная с communication graph. Абстрактная DBCFW-итерация имеет вид:
+\begin{align*}
+  \bar z_r^t&=\sum_{p=1}^N[W_t]_{rp}z_p^t
+  &&\text{(mixing/consensus)},\\
+  \widehat w_r^t&=\mathcal{R}(\bar z_r^t,y_r^t)
+  &&\text{(локальная оценка общей модели)},\\
+  s_i^t&\in\argmin_{u_i\in\A_i}
+  \ip{u_i}{M_i\widehat w_r^t-b_i},\quad i\in B_r^t
+  &&\text{(sampled local LMO)},\\
+  a_i^{t+1}&=(1-\gamma_t)a_i^t+\gamma_ts_i^t,quad i\in B_r^t
+  &&\text{(block FW update)}.
+\end{align*}
+Конкретные рекурсии зависят от того, выполняется ли consensus по primal copies, по dual aggregate, по gradients или используется tracking. Decentralized FW можно анализировать как inexact FW: consensus error возмущает gradient/LMO, а connectivity и stepsize должны сделать эту ошибку суммируемой или достаточно быстро убывающей \citep{wai2017decentralized}. Для DBCFW добавляется sampling error/задержка обновления блоков. Корректная теорема требует явно зафиксировать network assumptions (double stochasticity или push-sum), bounded delay, частоту выбора каждого блока и точность LMO.
+
+\clearpage
+\section{Классы задач}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Где возникает product-domain и что является блоковым oracle.}
+\label{tab:classes}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.22\linewidth} X X}
+\toprule
+Класс & Dual block \(\A_i\) & Локальный LMO / оговорка \\
+\midrule
+Structural SVM & simplex over structured outputs примера \(i\) & loss-augmented inference; часто динамическое программирование, matching или decoding \citep{tsochantaridis2005, lacostejulien2013block} \\
+Multiclass hinge & simplex over incorrect labels & поиск максимального loss-augmented score \\
+Binary hinge SVM & interval/simplex-type block & выбор активной margin alternative; классическая dual coordinate структура \\
+Fenchel ERM & \(\dom f_i^*\) & стандартный FW только если область компактна и нелинейная часть обработана; logistic conjugate содержит entropy, squared loss дает некомпактный dual domain \citep{shalevshwartz2013sdca} \\
+Epigraph/threshold constraints & multipliers локальных inequalities & локальная линейная оптимизация, если нормировка multipliers дает compact polytope \\
+Semi-relaxed transport & simplex column для одного demand/target & минимум стоимости по source alternatives; product возникает непосредственно из column marginals, иногда уже в primal constrained form \\
+Network equilibrium & commodity/demand polytope & shortest path или local routing oracle; общие edge capacities могут связать блоки и требуют dualization/decomposition \\
+Convex head поверх features & dual block примера при фиксированном feature extractor & корректное convex subproblem; end-to-end сеть в общем случае не покрывается \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Граница обобщения на deep learning}
+
+Фраза «для произвольной DL-постановки» математически слишком сильна. Если score \(g_w(x)\) нелинеен по trainable weights \(w\), то даже convex loss как функция score обычно дает nonconvex composition как функцию \(w\). Тогда:
+\begin{enumerate}
+  \item перестановка \(\min_w\max_a\) может иметь duality gap;
+  \item \(R^*\) больше не устраняет всю модель, потому что loss зависит от нелинейного \(g_w\), а не от линейного \(K_iw\);
+  \item dual optimum не обязан восстанавливать global primal optimum;
+  \item классический convex FW gap перестает быть сертификатом suboptimality.
+\end{enumerate}
+
+Корректны четыре более узких пути.
+\begin{enumerate}
+  \item \textbf{Fixed representation + convex head.} Заморозить backbone и dualize обучение линейной/structured головы.
+  \item \textbf{Convex subproblem внутри alternating method.} Использовать BCFW для routing, matching, attention/assignment или output-layer subproblem, не называя это dual всего DL objective.
+  \item \textbf{Convexification.} Перейти к kernel/NTK, infinite-width или measure formulation, если для нее действительно доказана convex equivalence.
+  \item \textbf{Nonconvex constrained FW.} Применять FW непосредственно к компактному constrained parameter set и доказывать convergence to stationarity. Это валидный FW, но product dual mechanism уже другой; decentralized nonconvex FW существует, однако дает stationarity, не global optimality \citep{wai2017decentralized}.
+\end{enumerate}
+
+Итак, переносимая идея для DL --- \emph{искать convex, locally indexed subproblem или saddle layer}, а не автоматически dualize произвольную сеть.
+
+\section{Когда гипотеза не работает}
+
+Product-структура отсутствует или недостаточна для BCFW в следующих случаях:
+\begin{itemize}
+  \item loss содержит пары/батчи с глобальной нормировкой, ranking constraints между примерами или dataset-level fairness constraint;
+  \item dual domains некомпактны, поэтому FW LMO может не иметь решения;
+  \item \(R\) не сильно выпукла и \(R^*\) негладка; standard smooth FW rate неприменим;
+  \item локальный LMO сам NP-hard и не имеет контролируемой approximation guarantee;
+  \item поддержание общего \(w(a)\) дороже, чем полный проход по блокам;
+  \item в decentralized сети communication/consensus error доминирует выигрыш от дешевого oracle;
+  \item mini-batch настолько мал, что число rounds и synchronization latency перекрывают экономию local work.
+\end{itemize}
+
+\section{Честное сравнение методов}
+
+Нельзя сравнивать full и block methods только по iteration count: одна full iteration вызывает все block oracles, одна BCFW iteration --- один или несколько. Нельзя также смешивать централизованную и децентрализованную пары.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Минимальный протокол сравнения.}
+\label{tab:protocol}
+\begin{tabularx}{\linewidth}{>{\bfseries}p{0.25\linewidth} X}
+\toprule
+Срез & Что фиксировать и показывать \\
+\midrule
+Centralized & \method{FW} vs \method{BCFW}: один objective, initialization, LMO implementation, stopping rule и tuning budget \\
+Decentralized & \method{DFW} vs \method{DBCFW}: тот же graph sequence, agents, partition, mixing/tracking rule, precision и hardware \\
+Oracle work & число block LMO calls; отдельно exact/approximate calls и их фактическое время \\
+Pass-equivalent & \(\sum_t|B_t|/n\) в central; в distributed --- нормировка по всем локальным блокам \\
+Wall clock & end-to-end time, включая model recovery, sampling, line search, diagnostics и communication \\
+Round time & критический путь раунда, а не сумма времени параллельных агентов \\
+Communication & rounds, messages, bytes, topology changes; отдельно model и tracker payload \\
+Quality & primal objective, dual objective, full/estimated gap, feasibility/consensus error, downstream metric \\
+Statistics & одинаковые seeds/splits, confidence intervals, tuning policy и predeclared budget cuts \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Полезно строить как минимум четыре графика: gap vs block-oracle calls, gap vs wall time, gap vs communication rounds и gap vs bytes. Победа по oracle work не является автоматически победой по времени или коммуникации. В decentralized setting особенно важно показывать две ошибки отдельно: optimization gap относительно consensus objective и network disagreement \(N^{-1}\sum_r\norm{w_r-\bar w}^2\).
+
+\section{Исследовательская программа и проверяемые гипотезы}
+
+\textbf{H1: product discovery.} Для каждой новой задачи выписать \(f_i^*\) или max-form, доказать strong duality и явно проверить, нет ли coupled constraints.
+
+\textbf{H2: oracle economy.} Измерить распределение стоимости \(C_i\). BCFW должен выигрывать прежде всего при высокой стоимости full sweep и возможности дешево инкрементировать \(q(a)\) и \(w(a)\).
+
+\textbf{H3: sampling.} Сравнить uniform, importance-by-cost, gap sampling и mini-batch selection при одинаковом oracle/time budget.
+
+\textbf{H4: network trade-off.} Для DFW/DBCFW варьировать spectral gap графа, data heterogeneity и число local steps per communication. Ожидается область, где block work экономит время, и область, где дополнительные rounds доминируют.
+
+\textbf{H5: DL boundary.} Сравнить frozen-backbone convex head, alternating convex layer и end-to-end nonconvex baseline. Claims о dual certificates делать только для первых двух режимов.
+
+\section{Вывод}
+
+Дуализация обнаруживает скрытую блочную структуру, когда три свойства совпадают: (i) primal loss/constraints являются суммой локальных выпуклых компонент; (ii) coupling проходит через общий линейный параметр и регуляризатор; (iii) локальные conjugate/max domains компактны и доступны через дешевый LMO. Сильная выпуклость \(R\) превращает coupling в гладкий dual objective, а product feasibility делает LMO block-separable. В max-form случае FW gap одновременно является primal--dual certificate.
+
+Поэтому BCFW не является эвристическим урезанием полного FW: он оптимизирует ту же dual задачу на том же feasible set, но распределяет вызовы дорогого oracle во времени. DBCFW добавляет физическое распределение блоков и приближенное восстановление общей модели через consensus/tracking. Практическая полезность определяется не числом итераций, а совместным бюджетом oracle work, wall time и communication.
+
+Самая сильная корректная формулировка общей идеи такова:
+\begin{quote}
+Если регуляризованный convex ERM или constrained problem допускает локально-сепарабельную saddle/Fenchel форму, а общий параметр можно устранить через гладкое сопряжение регуляризатора, то dual feasible set часто является произведением локальных областей. Тогда block-coordinate и decentralized block-coordinate Frank--Wolfe являются естественными алгоритмами, особенно когда локальный LMO дорог, но существенно дешевле полного sweep.
+\end{quote}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

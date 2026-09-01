@@ -1,0 +1,17 @@
+objective: structural_svm
+methods: [dfw, dbcfw]
+agents: [6]
+dims: [60]
+blocks: [12]
+batches: [1, 3, 6, 12]
+graphs: [erdos]
+lmos: [simplex]
+iters: 40
+reg: 0.1
+edge_prob: 0.7
+seed: 1207
+graph_seed: 2207
+log_every: 5
+opt_maxiter: 0
+sequence_length: 6
+label_count: 3

@@ -1,0 +1,20 @@
+objective: fashion_mnist_cnn
+methods: [dfw, dbcfw]
+agents: [10]
+dims: [23960]
+blocks: [20]
+batches: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, all]
+graphs: [erdos]
+iters: 200000
+wall_time_budget_sec: 30.0
+samples_per_agent: 50
+hidden_dim: 16
+reg: 0.0001
+box_radius: 1.0
+edge_prob: 0.35
+seed: 48
+graph_seed: 4048
+log_every: 2
+opt_maxiter: 0
+data_dir: data
+gamma_offset: 20.0

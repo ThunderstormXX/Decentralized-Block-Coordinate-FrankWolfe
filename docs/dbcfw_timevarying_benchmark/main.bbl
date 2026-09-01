@@ -1,0 +1,92 @@
+\begin{thebibliography}{11}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Chen and Lipman(2024)]{chen2024flow}
+Ricky T.~Q. Chen and Yaron Lipman.
+\newblock Flow matching on general geometries.
+\newblock In \emph{International Conference on Learning Representations}, 2024.
+\newblock URL \url{https://openreview.net/forum?id=g7ohDlTITL}.
+
+\bibitem[Coifman and Lafon(2006)]{coifman2006diffusion}
+Ronald~R. Coifman and St{\'e}phane Lafon.
+\newblock Diffusion maps.
+\newblock \emph{Applied and Computational Harmonic Analysis}, 21\penalty0
+  (1):\penalty0 5--30, 2006.
+\newblock \doi{10.1016/j.acha.2006.04.006}.
+
+\bibitem[Cuturi(2013)]{cuturi2013sinkhorn}
+Marco Cuturi.
+\newblock Sinkhorn distances: Lightspeed computation of optimal transport.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~26, pages 2292--2300, 2013.
+\newblock URL
+  \url{https://papers.neurips.cc/paper/4927-sinkhorn-distances-lightspeed-computation-of-optimal-transport}.
+
+\bibitem[Frank and Wolfe(1956)]{frank1956algorithm}
+Marguerite Frank and Philip Wolfe.
+\newblock An algorithm for quadratic programming.
+\newblock \emph{Naval Research Logistics Quarterly}, 3\penalty0
+  (1--2):\penalty0 95--110, 1956.
+\newblock \doi{10.1002/nav.3800030109}.
+
+\bibitem[Jaggi(2013)]{jaggi2013revisiting}
+Martin Jaggi.
+\newblock Revisiting frank-wolfe: Projection-free sparse convex optimization.
+\newblock In \emph{Proceedings of the 30th International Conference on Machine
+  Learning}, volume~28 of \emph{Proceedings of Machine Learning Research},
+  pages 427--435, 2013.
+\newblock URL \url{https://proceedings.mlr.press/v28/jaggi13.html}.
+
+\bibitem[Lacoste-Julien et~al.(2013)Lacoste-Julien, Jaggi, Schmidt, and
+  Pletscher]{lacostejulien2013block}
+Simon Lacoste-Julien, Martin Jaggi, Mark Schmidt, and Patrick Pletscher.
+\newblock Block-coordinate frank-wolfe optimization for structural svms.
+\newblock In \emph{Proceedings of the 30th International Conference on Machine
+  Learning}, volume~28 of \emph{Proceedings of Machine Learning Research},
+  pages 53--61, 2013.
+\newblock URL \url{https://proceedings.mlr.press/v28/lacoste-julien13.html}.
+
+\bibitem[Lipman et~al.(2010)Lipman, Rustamov, and
+  Funkhouser]{lipman2010biharmonic}
+Yaron Lipman, Raif~M. Rustamov, and Thomas~A. Funkhouser.
+\newblock Biharmonic distance.
+\newblock \emph{ACM Transactions on Graphics}, 29\penalty0 (3):\penalty0
+  27:1--27:11, 2010.
+\newblock \doi{10.1145/1805964.1805971}.
+
+\bibitem[Lipman et~al.(2023)Lipman, Chen, Ben-Hamu, Nickel, and
+  Le]{lipman2023flow}
+Yaron Lipman, Ricky T.~Q. Chen, Heli Ben-Hamu, Maximilian Nickel, and Matthew
+  Le.
+\newblock Flow matching for generative modeling.
+\newblock In \emph{International Conference on Learning Representations}, 2023.
+\newblock URL \url{https://openreview.net/forum?id=PqvMRDCJT9t}.
+
+\bibitem[Peyr{\'e} and Cuturi(2019)]{peyre2019computational}
+Gabriel Peyr{\'e} and Marco Cuturi.
+\newblock Computational optimal transport.
+\newblock \emph{Foundations and Trends in Machine Learning}, 11\penalty0
+  (5--6):\penalty0 355--607, 2019.
+\newblock \doi{10.1561/2200000073}.
+
+\bibitem[Villani(2009)]{villani2009optimal}
+C{\'e}dric Villani.
+\newblock \emph{Optimal Transport: Old and New}, volume 338 of
+  \emph{Grundlehren der mathematischen Wissenschaften}.
+\newblock Springer, Berlin, Heidelberg, 2009.
+\newblock \doi{10.1007/978-3-540-71050-9}.
+
+\bibitem[Wai et~al.(2017)Wai, Lafond, Scaglione, and
+  Moulines]{wai2017decentralized}
+Hoi-To Wai, Jean Lafond, Anna Scaglione, and Eric Moulines.
+\newblock Decentralized frank-wolfe algorithm for convex and nonconvex
+  problems.
+\newblock \emph{IEEE Transactions on Automatic Control}, 62\penalty0
+  (11):\penalty0 5522--5537, 2017.
+\newblock \doi{10.1109/TAC.2017.2685559}.
+
+\end{thebibliography}

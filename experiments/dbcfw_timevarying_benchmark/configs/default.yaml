@@ -1,0 +1,16 @@
+agents: [5, 10]
+dims: [50]
+blocks: [10]
+batches: [1, 5, all]
+methods: [dfw, dbcfw]
+graphs: [erdos, gossip]
+iters: 20
+samples_per_agent: 8
+reg: 0.001
+box_radius: 1.0
+edge_prob: 0.35
+geometric_radius: 0.6
+seed: 42
+graph_seed: 314
+log_every: 5
+opt_maxiter: 80

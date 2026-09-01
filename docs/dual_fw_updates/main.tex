@@ -1,0 +1,311 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,margin=23mm]{geometry}
+\usepackage{fontspec}
+\IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\setmainfont{Arial}}
+\usepackage{polyglossia}
+\setmainlanguage{russian}
+\newfontfamily\cyrillicfont{Times New Roman}
+\newfontfamily\cyrillicfonttt{Arial}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs,tabularx,array}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!45!black,urlcolor=blue!45!black]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.48em}
+\emergencystretch=2em
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\A}{\mathcal{A}}
+\newcommand{\ip}[2]{\left\langle #1,#2\right\rangle}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\dom}{\operatorname{dom}}
+\newcommand{\soft}{\operatorname{soft}}
+
+\title{\bfseries От primal ERM к dual Frank--Wolfe\\
+\large Явный вывод обновлений для dual variables и исходного параметра \(w\)}
+\author{Техническая записка}
+\date{16 июля 2026}
+
+\begin{document}
+\maketitle
+
+\section{Исходная задача}
+
+Начнем с
+\begin{equation}
+  \label{eq:primal}
+  \boxed{
+  \min_{w\in\R^d}P(w)
+  :=R(w)+\frac1n\sum_{i=1}^n f_i(K_iw).}
+\end{equation}
+Здесь \(K_i\) может быть identity; он оставлен, чтобы одна формула покрывала linear prediction, последнюю голову сети и structured score. Предполагаем, что \(R\) и \(f_i\) --- proper closed convex functions и выполнено strong duality. Для произвольной nonconvex end-to-end сети это не автоматический факт: дальнейшие формулы точны, если loss имеет convex или точное saddle/max представление.
+
+По определению Fenchel conjugate
+\[
+  f_i(z)=\max_{\alpha_i}
+  \left\{\ip{\alpha_i}{z}-f_i^*(\alpha_i)\right\}.
+\]
+Подставляем это в \eqref{eq:primal}:
+\begin{align}
+  P^\star
+  &=\min_w\max_{\alpha_1,\ldots,\alpha_n}
+  \left[
+  R(w)+\frac1n\sum_i
+  \bigl(\ip{\alpha_i}{K_iw}-f_i^*(\alpha_i)\bigr)
+  \right].
+  \label{eq:saddle}
+\end{align}
+Введем агрегированную dual-переменную в пространстве параметров:
+\begin{equation}
+  \label{eq:v}
+  v(\alpha):=-\frac1n\sum_{i=1}^nK_i^*\alpha_i.
+\end{equation}
+После перестановки min и max минимизация по \(w\) равна
+\[
+  \min_w\{R(w)-\ip{v(\alpha)}{w}\}=-R^*(v(\alpha)).
+\]
+Поэтому dual problem имеет вид
+\begin{equation}
+  \label{eq:dual-max}
+  \boxed{
+  \max_{\alpha_i\in\dom f_i^*}
+  D(\alpha):=-R^*(v(\alpha))-\frac1n\sum_i f_i^*(\alpha_i).}
+\end{equation}
+Для Frank--Wolfe удобнее минимизировать минус dual objective:
+\begin{equation}
+  \label{eq:dual-min}
+  \boxed{
+  \min_{\alpha\in\A}F(\alpha)
+  :=R^*(v(\alpha))+\frac1n\sum_i f_i^*(\alpha_i),
+  \qquad
+  \A=\prod_{i=1}^n\dom f_i^*.}
+\end{equation}
+
+\section{Как из dual variables получается исходный \(w\)}
+
+Минимизатор лагранжиана по \(w\) удовлетворяет
+\[
+  0\in\partial R(w)-v(\alpha).
+\]
+Если \(R\) строго выпукла, recovery map однозначна:
+\begin{equation}
+  \label{eq:recovery}
+  \boxed{w(\alpha)=\nabla R^*(v(\alpha)).}
+\end{equation}
+Это центральная формула: мы оптимизируем \(\alpha\), а параметр исходной модели каждый раз получаем через gradient conjugate регуляризатора.
+
+Если \(f_i^*\) дифференцируема, block-gradient dual objective равен
+\begin{equation}
+  \label{eq:dual-gradient}
+  \boxed{
+  \nabla_iF(\alpha)
+  =\frac1n\left[
+  \nabla f_i^*(\alpha_i)-K_iw(\alpha)
+  \right].}
+\end{equation}
+Действительно, \(\partial v/\partial\alpha_i=-K_i^*/n\), а \(\nabla R^*(v)=w\).
+
+\section{Frank--Wolfe update в dual-пространстве}
+
+Пусть \(\A\) компактна и \(F\) гладкая. Полный linear minimization oracle:
+\begin{equation}
+  \label{eq:lmo-general}
+  \boxed{
+  s^t\in\argmin_{s\in\A}
+  \ip{s}{\nabla F(\alpha^t)}.}
+\end{equation}
+Так как \(\A=\A_1\times\cdots\times\A_n\), он распадается:
+\begin{equation}
+  \label{eq:lmo-blocks}
+  s_i^t\in\argmin_{s_i\in\A_i}
+  \ip{s_i}{\nabla f_i^*(\alpha_i^t)-K_iw^t},
+  \qquad i=1,\ldots,n,
+\end{equation}
+где общий множитель \(1/n\) отброшен. Dual Frank--Wolfe update:
+\begin{equation}
+  \label{eq:alpha-update}
+  \boxed{
+  \alpha^{t+1}=(1-\gamma_t)\alpha^t+\gamma_ts^t.}
+\end{equation}
+
+Теперь явно переведем этот update обратно в primal-параметр. Из линейности \(v(\alpha)\):
+\begin{align}
+  v^{t+1}
+  &=(1-\gamma_t)v^t+\gamma_tv(s^t),
+  \label{eq:v-update}\\
+  \boxed{
+  w^{t+1}
+  =\nabla R^*\!\left((1-\gamma_t)v^t+\gamma_tv(s^t)\right).}
+  \label{eq:w-general-update}
+\end{align}
+В общем случае это \emph{не} convex combination между \(w^t\) и \(w(s^t)\), потому что map \(\nabla R^*\) может быть нелинейной. Такое простое усреднение возникает для quadratic regularizer.
+
+\subsection{Block-coordinate update}
+
+Если обновляем только блоки \(B_t\subseteq\{1,\ldots,n\}\), то
+\begin{align}
+  \alpha_i^{t+1}
+  &=(1-\gamma_{t,i})\alpha_i^t+\gamma_{t,i}s_i^t,
+  &&i\in B_t,\\
+  \alpha_i^{t+1}&=\alpha_i^t,
+  &&i\notin B_t.
+\end{align}
+Агрегат и исходный параметр обновляются как
+\begin{align}
+  \boxed{
+  v^{t+1}=v^t-\frac1n\sum_{i\in B_t}
+  K_i^*(\alpha_i^{t+1}-\alpha_i^t),}
+  \label{eq:v-block}\\
+  \boxed{w^{t+1}=\nabla R^*(v^{t+1}).}
+  \label{eq:w-block}
+\end{align}
+То есть для BCFW не нужно пересчитывать сумму по всему датасету: достаточно изменить вклад выбранных dual blocks и применить recovery map.
+
+\section{Чистая max/hinge-форма}
+
+Для Frank--Wolfe особенно удобен случай
+\begin{equation}
+  \label{eq:max-form}
+  f_i(w)=\max_{a_i\in\A_i}
+  \ip{a_i}{b_i-M_iw},
+\end{equation}
+где \(\A_i\) --- компактное множество альтернатив. Тогда
+\begin{align}
+  q(a)&=\frac1n\sum_iM_i^*a_i,\\
+  F(a)&=R^*(q(a))-\frac1n\sum_i\ip{a_i}{b_i},
+  \label{eq:max-dual}\\
+  \boxed{w(a)=\nabla R^*(q(a)),}
+  \label{eq:max-recovery}\\
+  \nabla_iF(a)&=\frac1n(M_iw(a)-b_i).
+\end{align}
+Здесь LMO совсем простой:
+\begin{equation}
+  \label{eq:max-lmo}
+  \boxed{
+  s_i^t\in\argmin_{s_i\in\A_i}
+  \ip{s_i}{M_iw^t-b_i}
+  =\argmax_{s_i\in\A_i}
+  \ip{s_i}{b_i-M_iw^t}.}
+\end{equation}
+Это и есть выбор наиболее нарушенной alternative/label/constraint при текущей модели. После него
+\begin{align}
+  a_i^{t+1}&=(1-\gamma_t)a_i^t+\gamma_ts_i^t,\\
+  q^{t+1}&=q^t+\frac{\gamma_t}{n}
+  \sum_{i\in B_t}M_i^*(s_i^t-a_i^t),
+  \label{eq:q-update}\\
+  \boxed{w^{t+1}=\nabla R^*(q^{t+1}).}
+\end{align}
+
+\section{Подстановка конкретных регуляризаторов}
+
+Во всех формулах ниже \(q\) означает агрегат из max-form. Для общей Fenchel-формы нужно просто заменить \(q\) на \(v\).
+
+\subsection{Обычный quadratic regularizer}
+
+Пусть
+\[
+  R(w)=\frac\lambda2\norm{w}_2^2,\qquad
+  R^*(q)=\frac1{2\lambda}\norm{q}_2^2.
+\]
+Тогда
+\begin{equation}
+  \boxed{w=\frac q\lambda.}
+\end{equation}
+Для full FW:
+\begin{equation}
+  \boxed{
+  w^{t+1}=(1-\gamma_t)w^t
+  +\gamma_t\frac{q(s^t)}{\lambda}.}
+\end{equation}
+Для block update:
+\begin{equation}
+  \boxed{
+  w^{t+1}=w^t+\frac1{\lambda n}
+  \sum_{i\in B_t}\gamma_{t,i}M_i^*(s_i^t-a_i^t).}
+\end{equation}
+
+\subsection{Weighted quadratic regularizer}
+
+Для \(H\succ0\):
+\[
+  R(w)=\frac\lambda2w^\top Hw,\qquad
+  R^*(q)=\frac1{2\lambda}q^\top H^{-1}q,\qquad
+  \boxed{w=\frac1\lambda H^{-1}q.}
+\]
+Следовательно,
+\begin{equation}
+  \boxed{
+  w^{t+1}=w^t+\frac1{\lambda n}H^{-1}
+  \sum_{i\in B_t}\gamma_{t,i}M_i^*(s_i^t-a_i^t).}
+\end{equation}
+
+\subsection{\(p\)-power regularizer}
+
+Пусть \(p>1\), \(p^{-1}+r^{-1}=1\), и
+\[
+  R(w)=\frac\lambda p\norm{w}_p^p.
+\]
+Тогда
+\[
+  R^*(q)=\frac{\lambda^{1-r}}r\norm{q}_r^r,\qquad
+  \boxed{
+  w_j=\lambda^{1-r}\operatorname{sign}(q_j)|q_j|^{r-1}.}
+\]
+После FW update сначала обновляется \(q^{t+1}\) по \eqref{eq:q-update}, затем эта формула применяется покоординатно. При \(p\ne2\) update по \(w\) нелинеен.
+
+\subsection{Elastic net}
+
+Пусть
+\[
+  R(w)=\lambda_1\norm{w}_1+\frac{\lambda_2}{2}\norm{w}_2^2,
+  \qquad \lambda_2>0.
+\]
+Тогда
+\begin{align}
+  R^*(q)&=\frac1{2\lambda_2}
+  \norm{\soft(q,\lambda_1)}_2^2,\\
+  \boxed{
+  w=\frac1{\lambda_2}\soft(q,\lambda_1),}
+\end{align}
+где \(\soft(q,\tau)_j=\operatorname{sign}(q_j)(|q_j|-\tau)_+\). Поэтому BCFW обновляет \(q\) линейно, а затем применяет soft-thresholding.
+
+\subsection{Entropy regularizer на simplex}
+
+Если \(w\in\Delta_d\) и
+\[
+  R(w)=\lambda\sum_jw_j\log w_j+I_{\Delta_d}(w),
+\]
+то
+\begin{align}
+  R^*(q)&=\lambda\log\sum_j\exp(q_j/\lambda),\\
+  \boxed{w=\operatorname{softmax}(q/\lambda).}
+\end{align}
+Здесь FW update dual aggregate \(q\) превращается в multiplicative/softmax-like изменение исходного \(w\), а не в линейное усреднение.
+
+\subsection{Чистый \(\ell_1\)-regularizer}
+
+Для \(R(w)=\lambda\norm{w}_1\):
+\[
+  R^*(q)=I_{\{\norm{q}_\infty\le\lambda\}}(q).
+\]
+Conjugate негладкая, а \(w=\nabla R^*(q)\) не определено однозначно. Поэтому чистый \(\ell_1\) не дает описанный выше гладкий dual FW без дополнительного smoothing или небольшой quadratic component. Elastic net устраняет эту проблему.
+
+\section{Итоговая схема}
+
+Для max/hinge DL subproblem вся итерация сводится к четырем строкам:
+\begin{align*}
+  w^t&=\nabla R^*(q^t),\\
+  s_i^t&\in\argmax_{s_i\in\A_i}\ip{s_i}{b_i-M_iw^t},
+  \qquad i\in B_t,\\
+  q^{t+1}&=q^t+\frac1n\sum_{i\in B_t}
+  \gamma_{t,i}M_i^*(s_i^t-a_i^t),\\
+  a_i^{t+1}&=(1-\gamma_{t,i})a_i^t+\gamma_{t,i}s_i^t,
+  \qquad
+  w^{t+1}=\nabla R^*(q^{t+1}).
+\end{align*}
+Регуляризатор полностью определяет отображение \(q\mapsto w\). Quadratic дает линейный update, \(p\)-regularizer --- степенной, elastic net --- soft-thresholding, entropy --- softmax.
+
+\end{document}
