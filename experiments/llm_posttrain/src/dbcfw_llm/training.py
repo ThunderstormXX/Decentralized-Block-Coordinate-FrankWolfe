@@ -30,7 +30,7 @@ def _load(config: dict[str, Any]):
     if requested_device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("Config requests CUDA but torch.cuda.is_available() is false")
     model = AutoModelForCausalLM.from_pretrained(
-        model_cfg["name"], torch_dtype=_dtype(model_cfg.get("dtype", "bfloat16"))
+        model_cfg["name"], dtype=_dtype(model_cfg.get("dtype", "bfloat16"))
     ).to(requested_device)
     model.config.use_cache = False
     for parameter in model.parameters():

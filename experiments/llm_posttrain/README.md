@@ -34,8 +34,9 @@ bash server/bootstrap_opt2.sh
 bash server/run_end_to_end.sh
 ```
 
-Use GPU 3 on the current `opt_2` host by default; override with
-`CUDA_VISIBLE_DEVICES` when scheduling changes.
+The server scripts currently default to CUDA ordinal 6, the available RTX on
+the shared `opt_2` host; override `CUDA_VISIBLE_DEVICES` when scheduling changes.
+Smoke configs use `float16`, which runs on both the RTX fallback and A100s.
 Bootstrap pins the official PyTorch 2.8 CUDA 12.8 wheel because the server's
 CUDA 12.9-capable driver cannot load CUDA 13 wheels.
 

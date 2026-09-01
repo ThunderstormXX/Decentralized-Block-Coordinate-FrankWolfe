@@ -2,7 +2,7 @@ run_name: qwen05b_rl_kl_fw_smoke
 seed: 2027
 model:
   name: Qwen/Qwen2.5-0.5B
-  dtype: bfloat16
+  dtype: float16
   device: cuda
 adapter:
   target_suffixes: [q_proj]
