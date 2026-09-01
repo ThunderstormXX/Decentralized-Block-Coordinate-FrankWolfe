@@ -7,6 +7,8 @@ convex benchmark. It contains two deliberately small end-to-end paths:
   updated with rank-one Frank-Wolfe LMOs;
 - `rl-kl-fw`: the same adapter geometry with a primal-dual sampled reverse-KL
   constraint and exact forward-token-KL audit.
+- `rlvr`: a common Dr. GRPO-style GSM8K protocol for the gated R0–F4 baseline
+  matrix (frozen, AdamW/LoRA, nuclear FW, penalty, dual and backtracking).
 
 These are non-convex/stochastic experiments. They do not inherit the convex
 DBCFW convergence guarantee.
@@ -32,6 +34,7 @@ On `opt_2`, bootstrap creates:
 cd ~/DBCFW/experiments/llm_posttrain
 bash server/bootstrap_opt2.sh
 bash server/run_end_to_end.sh
+bash server/run_rlvr_pilot_matrix.sh
 ```
 
 The server scripts currently default to CUDA ordinal 6, the available RTX on
@@ -56,3 +59,7 @@ source .env.server
 The smoke fixtures are project-authored arithmetic/instruction examples. The
 default checkpoint is `Qwen/Qwen2.5-0.5B`, whose model card reports an Apache-2.0
 license. Model downloads remain in the external Hugging Face cache.
+
+The 0.5B matrix is an implementation pilot, not a reasoning result. The
+pre-registered research configuration is `configs/rlvr_research_15b.yaml`; it
+must only be interpreted after a longer token-matched run with multiple seeds.

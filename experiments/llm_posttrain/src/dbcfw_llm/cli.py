@@ -49,6 +49,9 @@ def main() -> None:
     for command in ("sft-fw", "rl-kl-fw"):
         child = subparsers.add_parser(command)
         child.add_argument("--config", required=True)
+    rlvr = subparsers.add_parser("rlvr")
+    rlvr.add_argument("--config", required=True)
+    rlvr.add_argument("--variant", required=True)
     args = parser.parse_args()
     if args.command == "probe":
         print(json.dumps(probe(), indent=2, sort_keys=True))
@@ -58,10 +61,14 @@ def main() -> None:
         from .training import train_sft_fw
 
         result = train_sft_fw(config)
-    else:
+    elif args.command == "rl-kl-fw":
         from .training import train_rl_kl_fw
 
         result = train_rl_kl_fw(config)
+    else:
+        from .rlvr import run_rlvr
+
+        result = run_rlvr(config, args.variant)
     print(result)
 
 

@@ -50,6 +50,13 @@ class RunArtifacts:
             "git_dirty": bool(_git_value("status", "--porcelain")),
             "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
         }
+        try:
+            import torch
+
+            environment["torch"] = torch.__version__
+            environment["cuda_available"] = torch.cuda.is_available()
+        except ImportError:
+            environment["torch"] = "unavailable"
         (run_path / "environment.json").write_text(
             json.dumps(environment, indent=2, sort_keys=True), encoding="utf-8"
         )

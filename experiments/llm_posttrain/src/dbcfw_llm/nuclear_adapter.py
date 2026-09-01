@@ -131,7 +131,7 @@ def inject_nuclear_adapters(
 
 
 @contextmanager
-def adapters_disabled(adapters: dict[str, NuclearFWLinear]):
+def adapters_disabled(adapters: dict[str, nn.Module]):
     previous = {name: adapter.enabled for name, adapter in adapters.items()}
     try:
         for adapter in adapters.values():

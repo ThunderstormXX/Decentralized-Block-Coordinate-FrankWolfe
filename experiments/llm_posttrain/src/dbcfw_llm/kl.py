@@ -19,6 +19,22 @@ def sampled_reverse_kl_per_token(policy_logps: torch.Tensor, reference_logps: to
     return policy_logps - reference_logps
 
 
+def sampled_reverse_kl_k3(policy_logps: torch.Tensor, reference_logps: torch.Tensor) -> torch.Tensor:
+    """Non-negative k3 estimator of KL(policy || reference) on policy samples."""
+    if policy_logps.shape != reference_logps.shape:
+        raise ValueError("Policy and reference log-prob tensors must have equal shape")
+    log_ratio = reference_logps.float() - policy_logps.float()
+    return torch.exp(log_ratio) - log_ratio - 1.0
+
+
+def exact_reverse_token_kl(policy_logits: torch.Tensor, reference_logits: torch.Tensor) -> torch.Tensor:
+    """KL(p_policy || p_reference) for every batch/token position."""
+    policy_log = F.log_softmax(policy_logits.float(), dim=-1)
+    reference_log = F.log_softmax(reference_logits.float(), dim=-1)
+    policy_prob = policy_log.exp()
+    return (policy_prob * (policy_log - reference_log)).sum(dim=-1)
+
+
 def kl_quantiles(values: torch.Tensor) -> dict[str, float]:
     flat = values.detach().float().reshape(-1)
     return {
