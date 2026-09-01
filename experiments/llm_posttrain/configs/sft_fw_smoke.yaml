@@ -1,0 +1,24 @@
+run_name: qwen05b_sft_fw_smoke
+seed: 2026
+model:
+  name: Qwen/Qwen2.5-0.5B
+  dtype: bfloat16
+  device: cuda
+adapter:
+  target_suffixes: [q_proj]
+  max_modules: 1
+  radius: 0.50
+  lmo: power
+  lmo_iters: 8
+training:
+  steps: 6
+  batch_size: 1
+  max_length: 96
+  gamma: line_search_schedule
+data:
+  path: fixtures/sft_smoke.jsonl
+calibration:
+  prefixes:
+    - "Question: What is 7 + 5? Answer:"
+    - "Translate to French: good morning"
+    - "Complete the sequence: 2, 4, 6,"

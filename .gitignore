@@ -42,8 +42,16 @@ htmlcov/
 # Downloaded datasets, experiment runs, and generated artifacts
 experiments/**/data/
 experiments/**/artifacts/
+experiments/**/artifacts
 experiments/**/runs/
 experiments/**/runs_*/
+experiments/**/outputs/
+experiments/**/checkpoints/
+experiments/**/wandb/
+experiments/**/.env.server
+experiments/**/.server.env
+*.ckpt
+*.pt
 tmp/
 output/
 

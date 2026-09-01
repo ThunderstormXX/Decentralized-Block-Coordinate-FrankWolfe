@@ -1,0 +1,29 @@
+run_name: qwen05b_rl_kl_fw_smoke
+seed: 2027
+model:
+  name: Qwen/Qwen2.5-0.5B
+  dtype: bfloat16
+  device: cuda
+adapter:
+  target_suffixes: [q_proj]
+  max_modules: 1
+  radius: 0.50
+  lmo: power
+  lmo_iters: 8
+training:
+  steps: 4
+  batch_size: 3
+  max_prompt_length: 64
+  max_new_tokens: 8
+  temperature: 0.8
+  gamma: 0.20
+constraint:
+  sampled_reverse_kl_target_per_token: 0.02
+  dual_lr: 0.10
+  initial_lambda: 0.10
+  tolerance: 0.25
+  max_backtracks: 3
+calibration:
+  prefixes:
+    - "Question: What is 7 + 5? Answer with only the integer:"
+    - "Question: What is 9 - 4? Answer with only the integer:"
