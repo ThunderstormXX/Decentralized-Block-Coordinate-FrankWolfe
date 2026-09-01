@@ -110,11 +110,18 @@ def _load_gsm8k(config: dict[str, Any]) -> tuple[list[dict[str, str]], list[dict
     return train_rows, eval_rows
 
 
-def _prompt(question: str) -> str:
-    return (
+def _prompt(tokenizer, question: str) -> str:
+    user_text = (
         "Solve the grade-school math problem. Show concise reasoning and put the final "
-        f"numeric answer after ####.\nQuestion: {question}\nAnswer:"
+        f"numeric answer after ####.\nQuestion: {question}"
     )
+    if tokenizer.chat_template:
+        return tokenizer.apply_chat_template(
+            [{"role": "user", "content": user_text}],
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    return f"{user_text}\nAnswer:"
 
 
 def _completion_mask(response_ids: torch.Tensor, eos_token_id: int | None) -> torch.Tensor:
@@ -154,13 +161,14 @@ def _calibration(model, tokenizer, adapters, prompts: list[str], device) -> dict
 
 
 @torch.no_grad()
-def _evaluate(model, tokenizer, adapters, rows, device, max_new_tokens: int) -> dict[str, float]:
+def _evaluate(model, tokenizer, adapters, rows, device, max_new_tokens: int) -> dict[str, Any]:
     del adapters
     correct = 0.0
     generated_tokens = 0
+    predictions = []
     model.eval()
     for row in rows:
-        encoded = tokenizer(_prompt(row["question"]), return_tensors="pt").to(device)
+        encoded = tokenizer(_prompt(tokenizer, row["question"]), return_tensors="pt").to(device)
         sequence = _generate(
             model,
             **encoded,
@@ -172,7 +180,20 @@ def _evaluate(model, tokenizer, adapters, rows, device, max_new_tokens: int) -> 
         response = tokenizer.decode(response_ids[0], skip_special_tokens=True)
         correct += exact_answer_reward(response, row["answer"])
         generated_tokens += int(response_ids.numel())
-    return {"pass_at_1": correct / len(rows), "generated_tokens": generated_tokens}
+        predictions.append(
+            {
+                "question": row["question"],
+                "prediction": response,
+                "predicted_answer": extract_final_number(response),
+                "gold_answer": extract_final_number(row["answer"]),
+                "correct": bool(exact_answer_reward(response, row["answer"])),
+            }
+        )
+    return {
+        "pass_at_1": correct / len(rows),
+        "generated_tokens": generated_tokens,
+        "predictions": predictions,
+    }
 
 
 def _adapter_summary(adapters: dict[str, Any]) -> dict[str, Any]:
@@ -220,7 +241,7 @@ def run_rlvr(config: dict[str, Any], variant_name: str) -> Path:
     method = run["method"]
     training = run["training"]
     constraint = run["constraint"]
-    calibration_prompts = [_prompt(row["question"]) for row in eval_rows]
+    calibration_prompts = [_prompt(tokenizer, row["question"]) for row in eval_rows]
     before = _evaluate(
         model, tokenizer, adapters, eval_rows, device, int(training["eval_max_new_tokens"])
     )
@@ -243,7 +264,7 @@ def run_rlvr(config: dict[str, Any], variant_name: str) -> Path:
     for step in range(int(training["steps"])):
         started = time.perf_counter()
         row = train_rows[step % len(train_rows)]
-        prompt = _prompt(row["question"])
+        prompt = _prompt(tokenizer, row["question"])
         encoded = tokenizer(prompt, return_tensors="pt", truncation=True).to(device)
         prompt_length = int(encoded["input_ids"].shape[1])
         sequences = _generate(
